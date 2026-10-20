@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GifDesktop</title>
+<meta name="description" content="Animated GIFs and stickers on your Windows desktop: any place, any size.">
+<link rel="icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f6fb;
+    --surface: #ffffff;
+    --ink: #1b1a24;
+    --muted: #5f5c70;
+    --line: #e4e1ee;
+    --accent: #6b4fe0;
+    --accent-ink: #ffffff;
+    --accent-soft: #ece7ff;
+    --desk-a: #7aa7ff;
+    --desk-b: #b58cff;
+    --shadow: 0 10px 30px rgba(40, 30, 90, .12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #13121a;
+      --surface: #1c1b26;
+      --ink: #f0eef8;
+      --muted: #a9a5bd;
+      --line: #2e2c3c;
+      --accent: #9b85ff;
+      --accent-ink: #13121a;
+      --accent-soft: #2a2546;
+      --desk-a: #2c3f75;
+      --desk-b: #4a2f7a;
+      --shadow: 0 10px 30px rgba(0, 0, 0, .4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #13121a; --surface: #1c1b26; --ink: #f0eef8; --muted: #a9a5bd; --line: #2e2c3c;
+    --accent: #9b85ff; --accent-ink: #13121a; --accent-soft: #2a2546;
+    --desk-a: #2c3f75; --desk-b: #4a2f7a; --shadow: 0 10px 30px rgba(0, 0, 0, .4);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 "IBM Plex Sans Arabic", system-ui, "Segoe UI", sans-serif;
+  }
+  a { color: var(--accent); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+
+  /* top bar */
+  header { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--ink); text-decoration: none; }
+  .brand img { width: 34px; height: 34px; }
+  .lang {
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+    font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+  }
+  .lang:hover { border-color: var(--accent); }
+
+  /* hero */
+  .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 40px; align-items: center; padding: 36px 0 64px; }
+  h1 { font-size: clamp(32px, 5vw, 50px); line-height: 1.15; margin: 0 0 16px; letter-spacing: -.01em; }
+  h1 em { font-style: normal; color: var(--accent); }
+  .lead { font-size: 18px; color: var(--muted); margin: 0 0 28px; max-width: 34em; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 700;
+    padding: 13px 22px; border-radius: 12px; border: 1px solid transparent;
+  }
+  .btn-main { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow); }
+  .btn-main:hover { filter: brightness(1.07); }
+  .btn-alt { border-color: var(--line); color: var(--ink); background: var(--surface); }
+  .btn-alt:hover { border-color: var(--accent); }
+  .note { font-size: 13px; color: var(--muted); margin-top: 12px; }
+
+  /* mock desktop */
+  .desk {
+    position: relative; aspect-ratio: 16 / 11; border-radius: 18px; overflow: hidden;
+    background: linear-gradient(135deg, var(--desk-a), var(--desk-b));
+    box-shadow: var(--shadow); border: 1px solid var(--line);
+  }
+  .desk::after {
+    content: ""; position: absolute; inset: auto 0 0 0; height: 9%;
+    background: rgba(20, 18, 35, .45); backdrop-filter: blur(6px);
+  }
+  .win {
+    position: absolute; background: rgba(255, 255, 255, .85); border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
+  }
+  .win::before {
+    content: ""; display: block; height: 14%; min-height: 10px;
+    background: rgba(0, 0, 0, .06); border-radius: 8px 8px 0 0;
+  }
+  .w1 { left: 7%; top: 10%; width: 48%; height: 52%; }
+  .w2 { left: 40%; top: 30%; width: 44%; height: 46%; opacity: .92; }
+  .sticker { position: absolute; z-index: 2; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .25)); }
+  .s1 { width: 26%; right: 6%; top: 6%; animation: bob 2.6s ease-in-out infinite; }
+  .s2 { width: 15%; left: 10%; bottom: 14%; animation: spin 5s linear infinite; }
+  .s3 { width: 13%; right: 22%; bottom: 13%; animation: bob 1.9s ease-in-out infinite reverse; }
+  .handle {
+    position: absolute; inset: -6px; border: 2px dashed rgba(255, 255, 255, .9); border-radius: 10px;
+  }
+  @keyframes bob { 50% { transform: translateY(-9%) rotate(-4deg); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .sticker { animation: none; } }
+
+  /* sections */
+  section { padding: 56px 0; border-top: 1px solid var(--line); }
+  h2 { font-size: 28px; margin: 0 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .card .ico {
+    width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px;
+    background: var(--accent-soft); color: var(--accent); margin-bottom: 12px;
+  }
+  .card .ico svg { width: 22px; height: 22px; }
+  .card h3 { margin: 0 0 4px; font-size: 17px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  .steps { counter-reset: s; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; padding: 0; margin: 0; list-style: none; }
+  .steps li { counter-increment: s; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .steps li::before {
+    content: counter(s); display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-ink); font-weight: 700; margin-bottom: 10px;
+  }
+  .steps b { display: block; margin-bottom: 2px; }
+  .steps span { color: var(--muted); font-size: 15px; }
+  code { background: var(--accent-soft); padding: 1px 6px; border-radius: 6px; font-size: .92em; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  th, td { text-align: start; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  th { font-size: 14px; color: var(--muted); font-weight: 500; }
+  kbd {
+    font: inherit; font-size: 13px; border: 1px solid var(--line); border-bottom-width: 2px;
+    border-radius: 6px; padding: 0 6px; background: var(--bg);
+  }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .two ul { margin: 0; padding-inline-start: 20px; color: var(--muted); }
+  .two li { margin: 6px 0; }
+
+  footer { padding: 32px 0 48px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); text-align: center; }
+
+  @media (max-width: 760px) {
+    .hero { grid-template-columns: 1fr; padding-top: 12px; gap: 32px; }
+    .two { grid-template-columns: 1fr; }
+    th, td { padding: 10px 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="brand" href="#"><img src="logo.png" alt="">GifDesktop</a>
+    <button class="lang" id="lang" type="button">العربية</button>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div>
+        <h1 data-i="title"></h1>
+        <p class="lead" data-i="lead"></p>
+        <div class="cta">
+          <a class="btn btn-main" href="GifDesktop.zip" download>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
+            <span data-i="download"></span>
+          </a>
+          <a class="btn btn-alt" id="repo" href="#" data-i="source"></a>
+        </div>
+        <p class="note" data-i="note"></p>
+      </div>
+
+      <div class="desk" aria-hidden="true">
+        <div class="win w1"></div>
+        <div class="win w2"></div>
+        <div class="sticker s1"><img src="logo.png" alt="" style="width:100%;display:block"><div class="handle"></div></div>
+        <svg class="sticker s2" viewBox="0 0 100 100"><path d="M50 6l12 30 32 2-25 20 9 31-28-17-28 17 9-31L6 38l32-2z" fill="#ffd34d" stroke="#fff" stroke-width="5" stroke-linejoin="round"/></svg>
+        <svg class="sticker s3" viewBox="0 0 100 100"><path d="M50 88S10 62 10 36a20 20 0 0140-6 20 20 0 0140 6c0 26-40 52-40 52z" fill="#ff6b9a" stroke="#fff" stroke-width="5" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+
+    <section>
+      <h2 data-i="featTitle"></h2>
+      <p class="sub" data-i="featSub"></p>
+      <div class="grid" id="features"></div>
+    </section>
+
+    <section>
+      <h2 data-i="howTitle"></h2>
+      <p class="sub" data-i="howSub"></p>
+      <ol class="steps" id="steps"></ol>
+    </section>
+
+    <section>
+      <h2 data-i="ctlTitle"></h2>
+      <p class="sub" data-i="ctlSub"></p>
+      <table>
+        <thead><tr><th data-i="thAction"></th><th data-i="thHow"></th></tr></thead>
+        <tbody id="controls"></tbody>
+      </table>
+    </section>
+
+    <section>
+      <div class="two">
+        <div class="card">
+          <h3 data-i="reqTitle"></h3>
+          <ul id="req"></ul>
+        </div>
+        <div class="card">
+          <h3 data-i="limTitle"></h3>
+          <ul id="lim"></ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer data-i="footer"></footer>
+</div>
+
+<script>
+  // Icons for the feature cards (stroke icons, drawn inline)
+  const ICONS = {
+    layers: '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
+    top: '<rect x="3" y="9" width="12" height="12" rx="2"/><rect x="9" y="3" width="12" height="12" rx="2"/>',
+    wand: '<path d="M4 20L16 8"/><path d="M15 3v3M18 6h3M19 2l-1.5 1.5M20 10l-1.5-1.5"/>',
+    sticker: '<path d="M14 3H6a3 3 0 00-3 3v12a3 3 0 003 3h8l7-7V6a3 3 0 00-3-3h-4z"/><path d="M14 21v-4a3 3 0 013-3h4"/>',
+    vector: '<circle cx="5" cy="19" r="2"/><circle cx="19" cy="5" r="2"/><path d="M6.5 17.5C9 9 13 6 17.5 6.5"/>',
+    sharp: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/>',
+    save: '<path d="M5 3h11l3 3v13a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/><path d="M7 3v5h8V3M7 21v-7h10v7"/>'
+  };
+
+  const T = {
+    en: {
+      title: 'GIFs and stickers <em>on your desktop</em>',
+      lead: 'Put animated GIFs and stickers anywhere on your Windows desktop, at any size. Transparent, always on top if you like, and remembered every time you start.',
+      download: 'Download for Windows',
+      source: 'View source',
+      note: 'Free · Windows 10 / 11 · nothing to install',
+      featTitle: 'What it does',
+      featSub: 'A small program that makes your desktop a little more fun.',
+      features: [
+        ['layers', 'Up to 10 + 10', 'Ten GIFs and ten stickers on screen at once, each with its own place and size.'],
+        ['top', 'Always on top', 'Keep them floating above your open windows, or let them sit on the desktop.'],
+        ['wand', 'Background removal', 'Solid-color backgrounds are removed automatically on every frame.'],
+        ['sticker', 'Stickers', 'WebP, PNG, JPG, GIF and SVG, plus Telegram animated stickers (.tgs and .webm).'],
+        ['vector', 'Image → SVG', 'Built-in converter. Pixel art becomes exact vectors that stay sharp at any size.'],
+        ['sharp', 'Sharp on any screen', 'Crisp menus and windows on 125%, 150% and higher scaling.'],
+        ['globe', 'Arabic & English', 'Switch the whole interface between Arabic and English with one click.'],
+        ['save', 'Remembers everything', 'Positions, sizes and options are saved. It can also start with Windows.']
+      ],
+      howTitle: 'Get started',
+      howSub: 'Three steps, about a minute.',
+      steps: [
+        ['Download', 'Download <code>GifDesktop.zip</code> and extract it to any folder.'],
+        ['Run', 'Double-click <code>GifDesktop.vbs</code>.'],
+        ['Pick', 'Choose your GIFs, then drag them where you want them.']
+      ],
+      ctlTitle: 'Controls',
+      ctlSub: 'Everything is a click, a drag or a scroll away.',
+      thAction: 'Action', thHow: 'How',
+      controls: [
+        ['Move', 'Drag with the left mouse button'],
+        ['Resize', 'Mouse wheel. Hold <kbd>Ctrl</kbd> for small steps'],
+        ['Exact position and size', 'Right-click → Set position and size'],
+        ['Add GIF / sticker', 'Right-click → Add GIF or Add sticker'],
+        ['Convert to SVG', 'Right-click → Convert image to SVG'],
+        ['Lock in place', 'Right-click → Lock position and size']
+      ],
+      reqTitle: 'Requirements',
+      req: [
+        'Windows 10 or 11',
+        'Uses the PowerShell and .NET Framework built into Windows, so there is nothing to install',
+        'WebP stickers need the WebP Image Extensions from the Microsoft Store (usually preinstalled)',
+        'Telegram stickers use the Edge WebView2 Runtime (built into Windows 11)'
+      ],
+      limTitle: 'Good to know',
+      lim: [
+        'Animated WebP stickers show only their first frame',
+        'Telegram stickers take a few seconds to prepare the first time, then open instantly',
+        'SVG works best for pixel art, cartoons and logos. Photos get a painted look',
+        'Windows may ask you to confirm the first time you run a downloaded script'
+      ],
+      footer: 'GifDesktop · Made for Windows',
+      langBtn: 'العربية'
+    },
+    ar: {
+      title: 'GIF وستيكرات <em>على سطح المكتب</em>',
+      lead: 'حط صور GIF وستيكرات متحركة بأي مكان على سطح المكتب بويندوز، وبأي حجم تريده. خلفيتها شفافة، وتقدر تخليها فوق كل النوافذ، والبرنامج يتذكر كل شي كل ما تفتحه.',
+      download: 'تنزيل لويندوز',
+      source: 'الكود المصدري',
+      note: 'مجاني · ويندوز 10 / 11 · ما يحتاج تنصيب',
+      featTitle: 'شنو يسوي',
+      featSub: 'برنامج صغير يخلي سطح المكتب أحلى.',
+      features: [
+        ['layers', 'لحد 10 + 10', 'عشر صور GIF وعشر ستيكرات بنفس الوقت، كل وحدة بمكانها وحجمها.'],
+        ['top', 'فوق النوافذ', 'تقدر تخليها فوق كل النوافذ المفتوحة، أو تخليها على سطح المكتب بس.'],
+        ['wand', 'إزالة الخلفية', 'إذا الخلفية لون واحد، تنشال تلقائياً من كل إطار.'],
+        ['sticker', 'ستيكرات', 'WebP وPNG وJPG وGIF وSVG، وستيكرات تيليكرام المتحركة (.tgs و.webm).'],
+        ['vector', 'تحويل إلى SVG', 'أداة تحويل داخل البرنامج. البكسل آرت يتحول بالضبط ويبقى حاد بأي حجم.'],
+        ['sharp', 'واضح على كل الشاشات', 'القوائم والنوافذ تطلع حادة على شاشات 125% و150% وأكثر.'],
+        ['globe', 'عربي وإنكليزي', 'تبدّل لغة البرنامج كله بضغطة وحدة.'],
+        ['save', 'يتذكر كل شي', 'الأماكن والأحجام والخيارات تنحفظ، ويقدر يشتغل مع تشغيل ويندوز.']
+      ],
+      howTitle: 'طريقة التشغيل',
+      howSub: 'ثلاث خطوات، تقريباً دقيقة.',
+      steps: [
+        ['نزّل', 'نزّل ملف <code>GifDesktop.zip</code> وفك ضغطه بأي مجلد.'],
+        ['شغّل', 'اضغط ضغطتين على <code>GifDesktop.vbs</code>.'],
+        ['اختار', 'اختار صور الـ GIF، وبعدين اسحبها للمكان اللي تريده.']
+      ],
+      ctlTitle: 'التحكم',
+      ctlSub: 'كل شي بضغطة أو سحبة أو عجلة الماوس.',
+      thAction: 'الإجراء', thHow: 'الطريقة',
+      controls: [
+        ['التحريك', 'اسحب بزر الماوس الأيسر'],
+        ['تغيير الحجم', 'عجلة الماوس، ومع <kbd>Ctrl</kbd> خطوات أصغر'],
+        ['مكان وحجم بالضبط', 'زر يمين ← تحديد المكان والحجم'],
+        ['إضافة GIF أو ستيكر', 'زر يمين ← إضافة GIF أو إضافة ستيكر'],
+        ['التحويل إلى SVG', 'زر يمين ← تحويل صورة إلى SVG'],
+        ['التثبيت بمكانه', 'زر يمين ← قفل المكان والحجم']
+      ],
+      reqTitle: 'المتطلبات',
+      req: [
+        'ويندوز 10 أو 11',
+        'يشتغل على PowerShell و.NET Framework الموجودة بويندوز أصلاً، فما يحتاج تنصّب شي',
+        'ستيكرات WebP تحتاج إضافة WebP Image Extensions من متجر مايكروسوفت (غالباً موجودة)',
+        'ستيكرات تيليكرام تستخدم Edge WebView2 Runtime (موجود بويندوز 11)'
+      ],
+      limTitle: 'معلومات مهمة',
+      lim: [
+        'ستيكرات WebP المتحركة يبين منها أول إطار بس',
+        'ستيكرات تيليكرام تاخذ كم ثانية أول مرة تنفتح، وبعدها تنفتح فوراً',
+        'التحويل إلى SVG أحلى شي للبكسل آرت والكرتون والشعارات، أما الصور الحقيقية فتطلع مثل لوحة مرسومة',
+        'ممكن ويندوز يطلب تأكيد أول مرة تشغّل فيها البرنامج بعد التنزيل'
+      ],
+      footer: 'GifDesktop · مصنوع لويندوز',
+      langBtn: 'English'
+    }
+  };
+
+  // Link to the GitHub repo, worked out from the Pages address (user.github.io/repo)
+  (function () {
+    const user = location.hostname.endsWith('.github.io') ? location.hostname.split('.')[0] : '';
+    const repo = location.pathname.split('/').filter(Boolean)[0] || '';
+    const a = document.getElementById('repo');
+    if (user && repo) a.href = 'https://github.com/' + user + '/' + repo;
+    else a.style.display = 'none';
+  })();
+
+  function svgIcon(name) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICONS[name] + '</svg>';
+  }
+
+  function render(lang) {
+    const t = T[lang];
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.querySelectorAll('[data-i]').forEach(el => { el.innerHTML = t[el.dataset.i]; });
+    document.getElementById('features').innerHTML = t.features.map(f =>
+      '<div class="card"><div class="ico">' + svgIcon(f[0]) + '</div><h3>' + f[1] + '</h3><p>' + f[2] + '</p></div>').join('');
+    document.getElementById('steps').innerHTML = t.steps.map(s => '<li><b>' + s[0] + '</b><span>' + s[1] + '</span></li>').join('');
+    document.getElementById('controls').innerHTML = t.controls.map(c => '<tr><td>' + c[0] + '</td><td>' + c[1] + '</td></tr>').join('');
+    document.getElementById('req').innerHTML = t.req.map(x => '<li>' + x + '</li>').join('');
+    document.getElementById('lim').innerHTML = t.lim.map(x => '<li>' + x + '</li>').join('');
+    document.getElementById('lang').textContent = t.langBtn;
+    try { localStorage.setItem('lang', lang); } catch (e) {}
+  }
+
+  let lang = 'en';
+  try { lang = localStorage.getItem('lang') || ''; } catch (e) { lang = ''; }
+  if (!T[lang]) lang = (navigator.language || '').toLowerCase().startsWith('ar') ? 'ar' : 'en';
+  render(lang);
+  document.getElementById('lang').addEventListener('click', () => {
+    lang = lang === 'ar' ? 'en' : 'ar';
+    render(lang);
+  });
+</script>
+</body>
+</html>

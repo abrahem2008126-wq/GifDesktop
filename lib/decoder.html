@@ -1,0 +1,91 @@
+<!doctype html>
+<!-- صفحة مخفية داخل WebView2: تحوّل ستيكرات تيليكرام (.tgs و .webm) إلى إطارات PNG وترسلها للبرنامج -->
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;background:transparent">
+<div id="box"></div>
+<canvas id="c"></canvas>
+<script src="lottie_canvas.min.js"></script>
+<script>
+  const MAX_SIDE = 320;   // أكبر من هذا ياخذ ذاكرة كثيرة بدون فرق واضح على سطح المكتب
+  const WEBM_FPS = 30;
+  const send = m => chrome.webview.postMessage(m);
+
+  chrome.webview.addEventListener('message', async e => {
+    const s = e.data, i = s.indexOf(':');
+    const type = s.slice(0, i), data = s.slice(i + 1);
+    try {
+      if (type === 'tgs') await renderLottie(JSON.parse(data));
+      else if (type === 'webm') await renderWebm(data);
+      else throw new Error('Unknown sticker type: ' + type);
+    } catch (err) {
+      send('error:' + (err && err.message ? err.message : err));
+    }
+  });
+
+  function fit(w, h) {
+    const k = Math.min(1, MAX_SIDE / Math.max(w, h));
+    return [Math.max(1, Math.round(w * k)), Math.max(1, Math.round(h * k))];
+  }
+
+  // .tgs = رسم Lottie متحرك (JSON). نرسم كل إطار على canvas وناخذ صورته
+  async function renderLottie(json) {
+    const [w, h] = fit(json.w, json.h);
+    const box = document.getElementById('box');
+    box.style.width = w + 'px';
+    box.style.height = h + 'px';
+    const anim = lottie.loadAnimation({
+      container: box, renderer: 'canvas', loop: false, autoplay: false,
+      animationData: json, rendererSettings: { dpr: 1, clearCanvas: true }
+    });
+    if (!anim.isLoaded) await new Promise(r => anim.addEventListener('DOMLoaded', r));
+    const canvas = box.querySelector('canvas');
+    const fps = json.fr || 30;
+    const step = fps > 40 ? 2 : 1;   // ستيكرات 60fps تنحفظ 30fps حتى توفر ذاكرة
+    const total = Math.floor(anim.totalFrames);
+    for (let f = 0; f < total; f += step) {
+      anim.goToAndStop(f, true);
+      send('frame:' + canvas.toDataURL('image/png'));
+    }
+    send('done:' + Math.round(1000 * step / fps));
+    anim.destroy();
+  }
+
+  // .webm = فيديو VP9 بخلفية شفافة. نوقف على كل إطار ونرسمه على canvas
+  async function renderWebm(base64) {
+    const bytes = Uint8Array.from(atob(base64), ch => ch.charCodeAt(0));
+    const v = document.createElement('video');
+    v.muted = true;
+    v.preload = 'auto';
+    v.src = URL.createObjectURL(new Blob([bytes], { type: 'video/webm' }));
+    await new Promise((res, rej) => {
+      v.onloadeddata = res;
+      v.onerror = () => rej(new Error('This video could not be decoded.'));
+    });
+    let duration = v.duration;
+    if (!isFinite(duration)) {   // بعض ملفات webm ما فيها مدة: نروح للآخر حتى نعرفها
+      v.currentTime = 1e6;
+      await seeked(v);
+      duration = v.currentTime;
+    }
+    const [w, h] = fit(v.videoWidth, v.videoHeight);
+    const c = document.getElementById('c');
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    const n = Math.max(1, Math.round(duration * WEBM_FPS));
+    for (let i = 0; i < n; i++) {
+      v.currentTime = Math.min(Math.max(0, duration - 0.001), i / WEBM_FPS + 0.0001);
+      await seeked(v);
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(v, 0, 0, w, h);
+      send('frame:' + c.toDataURL('image/png'));
+    }
+    send('done:' + Math.round(1000 / WEBM_FPS));
+  }
+
+  function seeked(v) {
+    return new Promise(r => v.addEventListener('seeked', r, { once: true }));
+  }
+</script>
+</body>
+</html>
